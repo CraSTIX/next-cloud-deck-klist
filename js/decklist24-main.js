@@ -39,6 +39,14 @@
 
 	async function deckRequest(path, options) {
 		const requestOptions = options || {}
+		const {
+			params,
+			action,
+			cardId,
+			boardId,
+			payloadKeys,
+			...fetchOptions
+		} = requestOptions
 		const headers = {
 			Accept: 'application/json',
 			'X-Requested-With': 'XMLHttpRequest',
@@ -49,34 +57,73 @@
 			headers.requesttoken = window.OC.requestToken
 		}
 
-		if (requestOptions.body && !headers['Content-Type']) {
+		const isFormData = typeof FormData !== 'undefined' && requestOptions.body instanceof FormData
+		if (requestOptions.body && !isFormData && !headers['Content-Type']) {
 			headers['Content-Type'] = 'application/json'
 		}
 
-		const response = await fetch(generateUrl(path), {
+		let url = generateUrl(path)
+		if (params) {
+			const queryParams = new URLSearchParams()
+			Object.keys(params).forEach((key) => {
+				if (params[key] !== null && typeof params[key] !== 'undefined') {
+					queryParams.append(key, params[key])
+				}
+			})
+			const query = queryParams.toString()
+			if (query) {
+				url += (url.indexOf('?') === -1 ? '?' : '&') + query
+			}
+		}
+
+		const method = String(fetchOptions.method || 'GET').toUpperCase()
+		const requestInfo = {
+			action: action || 'request',
+			method,
+			url,
+			cardId: cardId || null,
+			boardId: boardId || params?.boardId || null,
+			payloadKeys: payloadKeys || getPayloadKeys(requestOptions.body),
+		}
+		console.log('[DeckList24 API request]', requestInfo)
+
+		const response = await fetch(url, {
 			credentials: 'same-origin',
-			...requestOptions,
+			...fetchOptions,
 			headers,
 		})
 
-		if (!response.ok) {
-			let message = response.statusText
-			try {
-				const data = await response.json()
-				message = data.message || data.error || message
-			} catch (e) {
-				message = await response.text()
-			}
-			const error = new Error(message || ('HTTP ' + response.status))
-			error.status = response.status
-			throw error
-		}
-
 		if (response.status === 204) {
+			console.log('[DeckList24 API response]', {
+				...requestInfo,
+				status: response.status,
+				parsedResponse: null,
+			})
 			return null
 		}
 
-		return response.json()
+		const responseText = await response.text()
+		const parsedResponse = parseResponseBody(responseText)
+
+		if (!response.ok) {
+			const error = createApiError(response, method, url, parsedResponse, responseText)
+			console.error('[DeckList24 API error]', {
+				...requestInfo,
+				status: response.status,
+				parsedResponse,
+				errorBody: parsedResponse || responseText,
+				error,
+			})
+			throw error
+		}
+
+		console.log('[DeckList24 API response]', {
+			...requestInfo,
+			status: response.status,
+			parsedResponse: parsedResponse || responseText,
+		})
+
+		return parsedResponse || responseText
 	}
 
 	function init() {
@@ -628,6 +675,12 @@
 			return false
 		}
 
+		console.info('[DeckList24] Active Vue card bundle version:', bridge.version || 'unknown', {
+			cardId: card.id,
+			boardId: card.boardId || state.selectedBoardId || null,
+			stackId: card.stackId || null,
+		})
+
 		try {
 			return bridge.open({
 				card: normalizeModalCard(card),
@@ -692,6 +745,9 @@
 		if (!Array.isArray(detail.comments) && (detail.commentsCount || 0) > 0) {
 			try {
 				detail.comments = await deckOcsRequest('apps/deck/api/v1.0/cards/' + encodeURIComponent(cardId) + '/comments', {
+					action: 'loadComments',
+					cardId,
+					boardId: detail.boardId || state.selectedBoardId || null,
 					params: { limit: 20, offset: 0 },
 				})
 			} catch (error) {
@@ -1149,7 +1205,11 @@
 		let updatedCard
 		try {
 			updatedCard = await deckOcsRequest('apps/deck/api/v1.0/cards/' + encodeURIComponent(card.id), {
+				action: 'updateCard',
 				method: 'PUT',
+				cardId: card.id,
+				boardId: payload.boardId,
+				payloadKeys: Object.keys(payload),
 				body: JSON.stringify(payload),
 			})
 		} catch (error) {
@@ -2282,9 +2342,95 @@
 		return spinner
 	}
 
+	function getPayloadKeys(body) {
+		if (!body) {
+			return []
+		}
+		if (typeof FormData !== 'undefined' && body instanceof FormData && typeof body.keys === 'function') {
+			return Array.from(new Set(Array.from(body.keys())))
+		}
+		if (typeof body === 'string') {
+			try {
+				const parsed = JSON.parse(body)
+				if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+					return Object.keys(parsed)
+				}
+			} catch (error) {
+				// Plain text body.
+			}
+			return ['raw']
+		}
+		if (typeof body === 'object') {
+			return Object.keys(body)
+		}
+		return [typeof body]
+	}
+
+	function parseResponseBody(text) {
+		if (!text) {
+			return null
+		}
+		try {
+			return JSON.parse(text)
+		} catch (error) {
+			return null
+		}
+	}
+
+	function extractOcsData(data) {
+		if (data && data.ocs && Object.prototype.hasOwnProperty.call(data.ocs, 'data')) {
+			return data.ocs.data
+		}
+		return data
+	}
+
+	function extractOcsMessage(data, fallback) {
+		return data?.ocs?.meta?.message || data?.message || data?.error || fallback || ''
+	}
+
+	function formatResponseBody(data, text) {
+		if (data) {
+			try {
+				return JSON.stringify(data)
+			} catch (error) {
+				return String(data)
+			}
+		}
+		return text || ''
+	}
+
+	function createApiError(response, method, url, data, text) {
+		const ocsMessage = extractOcsMessage(data, response.statusText)
+		const responseBody = formatResponseBody(data, text)
+		const requestId = data?.requestId || data?.ocs?.meta?.requestId || ''
+		const parts = [
+			'HTTP status: ' + response.status,
+			'Request: ' + method + ' ' + url,
+			requestId ? 'Request ID: ' + requestId : '',
+			ocsMessage ? 'OCS message: ' + ocsMessage : '',
+			responseBody ? 'Response body: ' + responseBody : '',
+		].filter(Boolean)
+		const error = new Error(parts.join('\n') || ('HTTP ' + response.status))
+		error.status = response.status
+		error.url = url
+		error.method = method
+		error.ocsMessage = ocsMessage
+		error.requestId = requestId
+		error.responseBody = data || text || ''
+		error.responseText = text || ''
+		return error
+	}
+
 	async function deckOcsRequest(path, options) {
 		const requestOptions = options || {}
-		const { params, ...fetchOptions } = requestOptions
+		const {
+			params,
+			action,
+			cardId,
+			boardId,
+			payloadKeys,
+			...fetchOptions
+		} = requestOptions
 		const headers = {
 			Accept: 'application/json',
 			'OCS-APIRequest': 'true',
@@ -2296,17 +2442,35 @@
 			headers.requesttoken = window.OC.requestToken
 		}
 
-		if (requestOptions.body && !headers['Content-Type']) {
+		const isFormData = typeof FormData !== 'undefined' && requestOptions.body instanceof FormData
+		if (requestOptions.body && !isFormData && !headers['Content-Type']) {
 			headers['Content-Type'] = 'application/json'
 		}
 
 		let url = generateOcsUrl(path)
 		if (params) {
-			const query = new URLSearchParams(params).toString()
+			const queryParams = new URLSearchParams()
+			Object.keys(params).forEach((key) => {
+				if (params[key] !== null && typeof params[key] !== 'undefined') {
+					queryParams.append(key, params[key])
+				}
+			})
+			const query = queryParams.toString()
 			if (query) {
 				url += (url.indexOf('?') === -1 ? '?' : '&') + query
 			}
 		}
+
+		const method = String(fetchOptions.method || 'GET').toUpperCase()
+		const requestInfo = {
+			action: action || 'ocsRequest',
+			method,
+			url,
+			cardId: cardId || null,
+			boardId: boardId || params?.boardId || null,
+			payloadKeys: payloadKeys || getPayloadKeys(requestOptions.body),
+		}
+		console.log('[DeckList24 API request]', requestInfo)
 
 		const response = await fetch(url, {
 			credentials: 'same-origin',
@@ -2314,32 +2478,45 @@
 			headers,
 		})
 
+		if (response.status === 204) {
+			console.log('[DeckList24 API response]', {
+				...requestInfo,
+				status: response.status,
+				parsedResponse: null,
+			})
+			return null
+		}
+
+		const responseText = await response.text()
+		const parsedResponse = parseResponseBody(responseText)
+
 		if (!response.ok) {
-			let message = response.statusText
-			try {
-				const data = await response.json()
-				message = data?.ocs?.meta?.message || data.message || data.error || message
-			} catch (error) {
-				message = await response.text()
-			}
-			const error = new Error(message || ('HTTP ' + response.status))
-			error.status = response.status
+			const error = createApiError(response, method, url, parsedResponse, responseText)
+			console.error('[DeckList24 API error]', {
+				...requestInfo,
+				status: response.status,
+				parsedResponse,
+				errorBody: parsedResponse || responseText,
+				error,
+			})
 			throw error
 		}
 
-		const data = await response.json()
-		return data?.ocs?.data || data
+		console.log('[DeckList24 API response]', {
+			...requestInfo,
+			status: response.status,
+			parsedResponse: parsedResponse || responseText,
+		})
+
+		return parsedResponse ? extractOcsData(parsedResponse) : responseText
 	}
 
 	function generateOcsUrl(path) {
 		const normalized = String(path).replace(/^\/+/, '')
-		if (window.OC && typeof window.OC.linkToOCS === 'function') {
-			return window.OC.linkToOCS(normalized, 2)
-		}
-		if (window.OC && typeof window.OC.generateUrl === 'function') {
-			return window.OC.generateUrl('/ocs/v2.php/' + normalized)
-		}
-		return '/ocs/v2.php/' + normalized
+		const webRoot = window.OC && typeof window.OC.webroot === 'string'
+			? window.OC.webroot.replace(/\/+$/, '')
+			: ''
+		return webRoot + '/ocs/v2.php/' + normalized
 	}
 
 	function createLabels(labels) {

@@ -114,7 +114,7 @@ http://SERVER/index.php/apps/decklist24/
 Например:
 
 ```text
-http://10.224.77.60/index.php/apps/decklist24/
+http://127.0.0.1/index.php/apps/decklist24/
 ```
 
 ## Обновление приложения в Nextcloud Snap

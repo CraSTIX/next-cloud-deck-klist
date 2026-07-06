@@ -1,9 +1,13 @@
 import Vue from 'vue'
 import DeckCardModal from './components/card/DeckCardModal.vue'
 
+const CARD_BUNDLE_VERSION = '2026-07-06-attachments-v2'
+
 Vue.config.productionTip = false
 
 let activeVm = null
+
+console.info('DeckList24 card bundle version:', CARD_BUNDLE_VERSION)
 
 function destroyActive() {
 	if (!activeVm) {
@@ -23,6 +27,13 @@ function openDeckList24Card(options) {
 		return false
 	}
 
+	console.info('DeckList24 card bundle version:', CARD_BUNDLE_VERSION, {
+		action: 'openCardModal',
+		cardId: options.card.id,
+		boardId: options.card.boardId || (options.board && options.board.id) || null,
+		stackId: options.card.stackId || (options.card.stack && options.card.stack.id) || null,
+	})
+
 	destroyActive()
 
 	const mountEl = document.createElement('div')
@@ -36,6 +47,7 @@ function openDeckList24Card(options) {
 				stacks: options.stacks || [],
 				canEdit: options.canEdit !== false,
 				api: options.api || {},
+				bundleVersion: CARD_BUNDLE_VERSION,
 			},
 			on: {
 				close: destroyActive,
@@ -52,6 +64,7 @@ function openDeckList24Card(options) {
 }
 
 window.DeckList24Card = {
+	version: CARD_BUNDLE_VERSION,
 	open: openDeckList24Card,
 	close: destroyActive,
 }

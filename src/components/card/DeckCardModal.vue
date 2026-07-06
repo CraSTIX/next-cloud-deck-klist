@@ -178,6 +178,227 @@
 					</section>
 				</section>
 
+				<section v-else-if="activeTab === 'attachments'" class="decklist24-vue-card__panel">
+					<div class="decklist24-vue-card__section-head">
+						<h3>{{ t('Вложения') }}</h3>
+						<div class="decklist24-vue-card__actions">
+							<input
+								ref="attachmentInput"
+								type="file"
+								multiple
+								class="decklist24-vue-card__file-input"
+								@change="handleAttachmentInput">
+							<button
+								v-if="canEdit"
+								type="button"
+								class="decklist24-vue-card__small-button"
+								:disabled="attachmentsUploading || attachmentsLoading"
+								@click="openAttachmentPicker">
+								{{ attachmentsUploading ? t('Загрузка...') : t('Добавить файл') }}
+							</button>
+						</div>
+					</div>
+					<div
+						:class="['decklist24-vue-card__dropzone', { 'decklist24-vue-card__dropzone--active': attachmentDropActive }]"
+						@dragenter.prevent="attachmentDropActive = true"
+						@dragover.prevent="attachmentDropActive = true"
+						@dragleave.prevent="attachmentDropActive = false"
+						@drop.prevent="handleAttachmentDrop">
+						<div v-if="attachmentsError" class="decklist24-vue-card__notice decklist24-vue-card__notice--error">
+							<strong>{{ attachmentsError }}</strong>
+							<details v-if="attachmentsErrorDetails" class="decklist24-vue-card__error-details">
+								<summary>{{ t('Подробности') }}</summary>
+								<pre>{{ attachmentsErrorDetails }}</pre>
+							</details>
+						</div>
+						<div v-if="attachmentsLoading" class="decklist24-vue-card__inline-state">
+							<span class="icon-loading-small" />
+							{{ t('Загрузка вложений...') }}
+						</div>
+						<div v-else-if="visibleAttachments.length === 0" class="decklist24-vue-card__empty">
+							{{ t('Нет вложений') }}
+						</div>
+						<ul v-else class="decklist24-vue-card__attachments">
+							<li v-for="attachment in visibleAttachments" :key="attachmentKey(attachment)">
+								<div class="decklist24-vue-card__file-icon" aria-hidden="true">
+									<svg viewBox="0 0 24 24" focusable="false">
+										<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+										<path d="M14 2v6h6" />
+									</svg>
+								</div>
+								<div class="decklist24-vue-card__file-main">
+									<a :href="attachmentOpenUrl(attachment)" target="_blank" rel="noopener noreferrer">
+										{{ attachmentName(attachment) }}
+									</a>
+									<div class="decklist24-vue-card__file-meta">
+										<span>{{ formatFileSize(attachmentSize(attachment)) }}</span>
+										<span>{{ formatDate(attachment.createdAt, true) }}</span>
+										<span v-if="attachmentAuthor(attachment)">{{ attachmentAuthor(attachment) }}</span>
+									</div>
+								</div>
+								<div class="decklist24-vue-card__file-actions">
+									<a
+										class="decklist24-vue-card__small-button"
+										:href="attachmentOpenUrl(attachment)"
+										target="_blank"
+										rel="noopener noreferrer">
+										{{ t('Открыть') }}
+									</a>
+									<a
+										class="decklist24-vue-card__small-button"
+										:href="attachmentDownloadUrl(attachment)"
+										download>
+										{{ t('Скачать') }}
+									</a>
+									<button
+										v-if="canDeleteAttachment(attachment)"
+										type="button"
+										class="decklist24-vue-card__small-button"
+										:disabled="attachmentsDeleting[attachmentKey(attachment)]"
+										@click="deleteAttachment(attachment)">
+										{{ attachmentsDeleting[attachmentKey(attachment)] ? t('Удаление...') : t('Удалить') }}
+									</button>
+								</div>
+							</li>
+						</ul>
+						<div v-if="attachmentsUploading" class="decklist24-vue-card__inline-state">
+							<span class="icon-loading-small" />
+							{{ t('Загрузка файла...') }}
+						</div>
+					</div>
+				</section>
+
+				<section v-else-if="activeTab === 'comments'" class="decklist24-vue-card__panel">
+					<div class="decklist24-vue-card__section-head">
+						<h3>{{ t('Комментарии') }}</h3>
+					</div>
+					<div v-if="commentsError" class="decklist24-vue-card__notice decklist24-vue-card__notice--error">
+						<strong>{{ commentsError }}</strong>
+						<details v-if="commentsErrorDetails" class="decklist24-vue-card__error-details">
+							<summary>{{ t('Подробности') }}</summary>
+							<pre>{{ commentsErrorDetails }}</pre>
+						</details>
+					</div>
+					<form class="decklist24-vue-card__comment-form" @submit.prevent="createComment">
+						<div v-if="replyToComment" class="decklist24-vue-card__reply-preview">
+							<div>
+								<strong>{{ t('Ответ на комментарий') }}</strong>
+								<span>{{ replyToComment.actorDisplayName || replyToComment.actorId || t('Пользователь') }}</span>
+							</div>
+							<p>{{ commentPlainText(replyToComment) }}</p>
+							<button type="button" class="decklist24-vue-card__icon-button" :title="t('Отменить ответ')" @click="cancelReply">
+								×
+							</button>
+						</div>
+						<textarea
+							ref="commentInput"
+							v-model="newComment"
+							:disabled="commentsSubmitting || commentsLoading"
+							:placeholder="t('Написать комментарий...')"
+							rows="3"
+							maxlength="1000" />
+						<div class="decklist24-vue-card__actions">
+							<button
+								type="submit"
+								:disabled="commentsSubmitting || commentsLoading || newComment.trim().length === 0">
+								{{ commentsSubmitting ? t('Отправка...') : (replyToComment ? t('Ответить') : t('Отправить')) }}
+							</button>
+							<button
+								v-if="replyToComment"
+								type="button"
+								:disabled="commentsSubmitting"
+								@click="cancelReply">
+								{{ t('Отмена') }}
+							</button>
+						</div>
+					</form>
+					<div v-if="commentsLoading" class="decklist24-vue-card__inline-state">
+						<span class="icon-loading-small" />
+						{{ t('Загрузка комментариев...') }}
+					</div>
+					<div v-else-if="comments.length === 0" class="decklist24-vue-card__empty">
+						{{ t('Нет комментариев') }}
+					</div>
+					<ul v-else class="decklist24-vue-card__comments">
+						<li v-for="comment in comments" :key="comment.id">
+							<img
+								v-if="comment.actorId"
+								class="decklist24-vue-card__avatar"
+								:src="avatarUrl(comment.actorId)"
+								:alt="comment.actorDisplayName || comment.actorId">
+							<div v-else class="decklist24-vue-card__avatar decklist24-vue-card__avatar--fallback" aria-hidden="true">
+								{{ commentInitials(comment) }}
+							</div>
+							<article class="decklist24-vue-card__comment">
+								<header>
+									<div class="decklist24-vue-card__comment-title">
+										<strong>{{ comment.actorDisplayName || comment.actorId || t('Пользователь') }}</strong>
+										<span>{{ formatDate(comment.creationDateTime, true) }}</span>
+									</div>
+									<div class="decklist24-vue-card__comment-menu">
+										<button
+											type="button"
+											class="decklist24-vue-card__icon-button"
+											:aria-label="t('Действия комментария')"
+											:aria-expanded="commentMenuOpen === comment.id ? 'true' : 'false'"
+											@click.stop="toggleCommentMenu(comment)">
+											…
+										</button>
+										<div
+											v-if="commentMenuOpen === comment.id"
+											class="decklist24-vue-card__comment-menu-list"
+											@click.stop>
+											<button type="button" @click="startReply(comment)">
+												{{ t('Ответить') }}
+											</button>
+											<button
+												v-if="canEditComment(comment)"
+												type="button"
+												@click="startCommentEdit(comment)">
+												{{ t('Обновить') }}
+											</button>
+											<button
+												v-if="canEditComment(comment)"
+												type="button"
+												:disabled="commentDeleting[comment.id]"
+												@click="deleteComment(comment)">
+												{{ commentDeleting[comment.id] ? t('Удаление...') : t('Удалить') }}
+											</button>
+										</div>
+									</div>
+								</header>
+								<div v-if="comment.replyTo" class="decklist24-vue-card__reply">
+									<strong>{{ t('В ответ') }} {{ comment.replyTo.actorDisplayName || comment.replyTo.actorId || t('Пользователь') }}</strong>
+									<p>{{ commentPlainText(comment.replyTo) }}</p>
+								</div>
+								<div v-if="commentEditing[comment.id]" class="decklist24-vue-card__comment-edit">
+									<textarea
+										:value="commentDrafts[comment.id]"
+										:disabled="commentUpdating[comment.id]"
+										rows="3"
+										maxlength="1000"
+										@input="setCommentDraft(comment, $event.target.value)" />
+									<div class="decklist24-vue-card__actions">
+										<button
+											type="button"
+											:disabled="commentUpdating[comment.id] || !String(commentDrafts[comment.id] || '').trim()"
+											@click="saveCommentEdit(comment)">
+											{{ commentUpdating[comment.id] ? t('Сохранение...') : t('Сохранить') }}
+										</button>
+										<button
+											type="button"
+											:disabled="commentUpdating[comment.id]"
+											@click="cancelCommentEdit(comment)">
+											{{ t('Отмена') }}
+										</button>
+									</div>
+								</div>
+								<div v-else class="decklist24-vue-card__comment-text" v-html="renderMarkdown(commentPlainText(comment))" />
+							</article>
+						</li>
+					</ul>
+				</section>
+
 				<section v-else class="decklist24-vue-card__placeholder">
 					<h3>{{ activeTabLabel }}</h3>
 					<p>{{ t('Будет добавлено на следующем этапе.') }}</p>
@@ -235,6 +456,10 @@ export default {
 			type: Object,
 			default: () => ({}),
 		},
+		bundleVersion: {
+			type: String,
+			default: 'unknown',
+		},
 	},
 	data() {
 		return {
@@ -254,6 +479,27 @@ export default {
 			textAppAvailable: false,
 			textEditor: null,
 			textEditorError: '',
+			comments: [],
+			commentsLoaded: false,
+			commentsLoading: false,
+			commentsSubmitting: false,
+			commentsError: '',
+			commentsErrorDetails: '',
+			newComment: '',
+			replyToComment: null,
+			commentMenuOpen: null,
+			commentDrafts: {},
+			commentEditing: {},
+			commentUpdating: {},
+			commentDeleting: {},
+			attachments: [],
+			attachmentsLoaded: false,
+			attachmentsLoading: false,
+			attachmentsUploading: false,
+			attachmentsDeleting: {},
+			attachmentsError: '',
+			attachmentsErrorDetails: '',
+			attachmentDropActive: false,
 			tabs: [
 				{ id: 'properties', label: 'Свойства', iconPath: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z' },
 				{ id: 'attachments', label: 'Вложения', iconPath: 'M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8l8.5-8.5' },
@@ -306,14 +552,27 @@ export default {
 		labelNames() {
 			return (this.card.labels || []).map((label) => label.title).filter(Boolean).join(', ')
 		},
+		visibleAttachments() {
+			return [...this.attachments]
+				.filter((attachment) => Number(attachment.deletedAt || 0) === 0)
+				.sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
+		},
 	},
 	mounted() {
+		console.info('DeckList24 card bundle version:', this.bundleVersion, {
+			action: 'mounted',
+			cardId: this.card.id,
+			boardId: this.currentBoardId(),
+			stackId: this.currentStackId(),
+		})
 		this.logTextEditorDiagnostics()
 		this.loadCardDetails()
 		document.addEventListener('keydown', this.handleDocumentKeydown)
+		document.addEventListener('click', this.handleDocumentClick)
 	},
 	beforeDestroy() {
 		document.removeEventListener('keydown', this.handleDocumentKeydown)
+		document.removeEventListener('click', this.handleDocumentClick)
 		clearTimeout(this.saveTimer)
 		this.destroyTextEditor()
 	},
@@ -337,6 +596,10 @@ export default {
 		},
 		handleDocumentKeydown(event) {
 			if (event.key === 'Escape') {
+				if (this.commentMenuOpen) {
+					this.commentMenuOpen = null
+					return
+				}
 				if (this.titleEditing) {
 					this.cancelTitleEdit()
 					return
@@ -348,6 +611,9 @@ export default {
 				this.close()
 			}
 		},
+		handleDocumentClick() {
+			this.commentMenuOpen = null
+		},
 		async handleActiveTabChange(newTab, oldTab) {
 			try {
 				if (oldTab === 'properties' && newTab !== 'properties') {
@@ -357,6 +623,12 @@ export default {
 					this.$nextTick(() => {
 						this.enterPropertiesTab()
 					})
+				}
+				if (newTab === 'comments') {
+					this.loadComments()
+				}
+				if (newTab === 'attachments') {
+					this.loadAttachments()
 				}
 			} catch (error) {
 				console.error('[DeckList24] Failed to switch card tab cleanly', error)
@@ -537,10 +809,464 @@ export default {
 				this.setSaveStatus('error', errorMessage)
 			}
 		},
+		currentBoardId() {
+			return this.card.boardId || (this.board && this.board.id) || null
+		},
+		currentStackId() {
+			return this.card.stackId || (this.card.stack && this.card.stack.id) || null
+		},
+		attachmentControllerPath(suffix) {
+			return '/apps/deck/cards/' + encodeURIComponent(this.card.id) + suffix
+		},
+		attachmentApiPath(apiVersion, suffix) {
+			const boardId = this.currentBoardId()
+			const stackId = this.currentStackId()
+			if (!boardId || !stackId) {
+				return ''
+			}
+			return '/apps/deck/api/v' + encodeURIComponent(apiVersion)
+				+ '/boards/' + encodeURIComponent(boardId)
+				+ '/stacks/' + encodeURIComponent(stackId)
+				+ '/cards/' + encodeURIComponent(this.card.id)
+				+ '/attachments' + (suffix || '')
+		},
+		setPanelError(panel, message, error) {
+			if (panel === 'comments') {
+				this.commentsError = message
+				this.commentsErrorDetails = this.getErrorMessage(error)
+				console.error('[DeckList24] ' + message, error)
+			} else {
+				this.attachmentsError = message
+				this.attachmentsErrorDetails = this.getErrorMessage(error)
+				console.error('[DeckList24] ' + message, error)
+			}
+		},
+		async loadComments(force) {
+			if ((this.commentsLoaded && !force) || this.commentsLoading) {
+				return
+			}
+			this.commentsLoading = true
+			this.commentsError = ''
+			this.commentsErrorDetails = ''
+			try {
+				const comments = await this.ocsRequest('apps/deck/api/v1.0/cards/' + encodeURIComponent(this.card.id) + '/comments', {
+					action: 'loadComments',
+					cardId: this.card.id,
+					boardId: this.currentBoardId(),
+					params: {
+						limit: 50,
+						offset: 0,
+					},
+				})
+				this.comments = Array.isArray(comments)
+					? comments.sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
+					: []
+				this.commentsLoaded = true
+			} catch (error) {
+				this.setPanelError('comments', this.t('Не удалось загрузить комментарии.'), error)
+			} finally {
+				this.commentsLoading = false
+			}
+		},
+		async createComment() {
+			const message = this.newComment.trim()
+			if (!message || this.commentsSubmitting) {
+				return
+			}
+			if (message.length > 1000) {
+				this.commentsError = this.t('Комментарий не может быть длиннее 1000 символов.')
+				return
+			}
+			this.commentsSubmitting = true
+			this.commentsError = ''
+			this.commentsErrorDetails = ''
+			try {
+				const created = await this.ocsRequest('apps/deck/api/v1.0/cards/' + encodeURIComponent(this.card.id) + '/comments', {
+					action: 'addComment',
+					method: 'POST',
+					cardId: this.card.id,
+					boardId: this.currentBoardId(),
+					payloadKeys: ['message', 'parentId'],
+					body: JSON.stringify({
+						message,
+						parentId: this.replyToComment ? Number(this.replyToComment.id) : null,
+					}),
+				})
+				this.newComment = ''
+				this.replyToComment = null
+				if (created && created.id) {
+					this.comments = [created, ...this.comments.filter((comment) => Number(comment.id) !== Number(created.id))]
+				}
+				await this.loadComments(true)
+				this.updateLocalCardCounts({ commentsCount: Math.max(Number(this.card.commentsCount || 0) + 1, this.comments.length) })
+			} catch (error) {
+				this.setPanelError('comments', this.t('Не удалось отправить комментарий.'), error)
+			} finally {
+				this.commentsSubmitting = false
+			}
+		},
+		toggleCommentMenu(comment) {
+			this.commentMenuOpen = this.commentMenuOpen === comment.id ? null : comment.id
+		},
+		startReply(comment) {
+			this.commentMenuOpen = null
+			this.replyToComment = comment
+			this.$nextTick(() => {
+				if (this.$refs.commentInput) {
+					this.$refs.commentInput.focus()
+				}
+			})
+		},
+		cancelReply() {
+			this.replyToComment = null
+		},
+		currentUserId() {
+			if (window.OC && typeof window.OC.getCurrentUser === 'function') {
+				const user = window.OC.getCurrentUser()
+				if (user && typeof user === 'object') {
+					return user.uid || user.id || ''
+				}
+				return user || ''
+			}
+			if (window.OC && window.OC.currentUser) {
+				return window.OC.currentUser
+			}
+			if (window.oc_current_user) {
+				return window.oc_current_user
+			}
+			return ''
+		},
+		canEditComment(comment) {
+			const currentUser = this.currentUserId()
+			return this.canEdit && currentUser && String(comment.actorId || '') === String(currentUser)
+		},
+		startCommentEdit(comment) {
+			this.commentMenuOpen = null
+			this.$set(this.commentDrafts, comment.id, this.commentPlainText(comment))
+			this.$set(this.commentEditing, comment.id, true)
+		},
+		setCommentDraft(comment, value) {
+			this.$set(this.commentDrafts, comment.id, value)
+		},
+		cancelCommentEdit(comment) {
+			this.$delete(this.commentDrafts, comment.id)
+			this.$delete(this.commentEditing, comment.id)
+		},
+		async saveCommentEdit(comment) {
+			const message = String(this.commentDrafts[comment.id] || '').trim()
+			if (!message || this.commentUpdating[comment.id]) {
+				return
+			}
+			this.$set(this.commentUpdating, comment.id, true)
+			this.commentsError = ''
+			this.commentsErrorDetails = ''
+			try {
+				const updated = await this.ocsRequest('apps/deck/api/v1.0/cards/' + encodeURIComponent(this.card.id) + '/comments/' + encodeURIComponent(comment.id), {
+					action: 'updateComment',
+					method: 'PUT',
+					cardId: this.card.id,
+					boardId: this.currentBoardId(),
+					payloadKeys: ['message'],
+					body: JSON.stringify({ message }),
+				})
+				if (updated && updated.id) {
+					this.comments = this.comments.map((item) => Number(item.id) === Number(updated.id) ? updated : item)
+				}
+				this.cancelCommentEdit(comment)
+				await this.loadComments(true)
+			} catch (error) {
+				this.setPanelError('comments', this.t('Не удалось обновить комментарий.'), error)
+			} finally {
+				this.$delete(this.commentUpdating, comment.id)
+			}
+		},
+		async deleteComment(comment) {
+			if (this.commentDeleting[comment.id]) {
+				return
+			}
+			const confirmed = window.confirm
+				? window.confirm(this.t('Удалить комментарий?'))
+				: true
+			if (!confirmed) {
+				this.commentMenuOpen = null
+				return
+			}
+			this.$set(this.commentDeleting, comment.id, true)
+			this.commentsError = ''
+			this.commentsErrorDetails = ''
+			try {
+				await this.ocsRequest('apps/deck/api/v1.0/cards/' + encodeURIComponent(this.card.id) + '/comments/' + encodeURIComponent(comment.id), {
+					action: 'deleteComment',
+					method: 'DELETE',
+					cardId: this.card.id,
+					boardId: this.currentBoardId(),
+				})
+				this.commentMenuOpen = null
+				this.comments = this.comments.filter((item) => Number(item.id) !== Number(comment.id))
+				this.updateLocalCardCounts({ commentsCount: Math.max(Number(this.card.commentsCount || 0) - 1, this.comments.length) })
+				await this.loadComments(true)
+			} catch (error) {
+				this.setPanelError('comments', this.t('Не удалось удалить комментарий.'), error)
+			} finally {
+				this.$delete(this.commentDeleting, comment.id)
+			}
+		},
+		async loadAttachments(force) {
+			if ((this.attachmentsLoaded && !force) || this.attachmentsLoading) {
+				return
+			}
+			this.attachmentsLoading = true
+			this.attachmentsError = ''
+			this.attachmentsErrorDetails = ''
+			try {
+				const attachments = await this.loadAttachmentsFromDeck()
+				this.attachments = Array.isArray(attachments) ? attachments : []
+				this.attachmentsLoaded = true
+				this.updateLocalCardCounts({ attachmentCount: this.visibleAttachments.length })
+			} catch (error) {
+				this.setPanelError('attachments', this.t('Не удалось загрузить вложения.'), error)
+			} finally {
+				this.attachmentsLoading = false
+			}
+		},
+		openAttachmentPicker() {
+			if (this.$refs.attachmentInput) {
+				this.$refs.attachmentInput.click()
+			}
+		},
+		async handleAttachmentInput(event) {
+			const files = Array.from(event.target.files || [])
+			event.target.value = ''
+			await this.uploadAttachments(files)
+		},
+		async handleAttachmentDrop(event) {
+			this.attachmentDropActive = false
+			if (!this.canEdit) {
+				return
+			}
+			const files = Array.from(event.dataTransfer?.files || [])
+			await this.uploadAttachments(files)
+		},
+		async loadAttachmentsFromDeck() {
+			const apiPath = this.attachmentApiPath('1.1')
+			if (apiPath) {
+				try {
+					return await this.request(apiPath, {
+						action: 'loadAttachments:deckRestV11',
+						cardId: this.card.id,
+						boardId: this.currentBoardId(),
+						headers: {
+							'OCS-APIRequest': 'true',
+						},
+					})
+				} catch (error) {
+					console.warn('[DeckList24] Failed to load attachments through Deck REST API, using controller fallback', error)
+				}
+			}
+			return this.request(this.attachmentControllerPath('/attachments'), {
+				action: 'loadAttachments:controller',
+				cardId: this.card.id,
+				boardId: this.currentBoardId(),
+			})
+		},
+		async uploadAttachments(files) {
+			if (!files.length || this.attachmentsUploading) {
+				return
+			}
+			this.attachmentsUploading = true
+			this.attachmentsError = ''
+			this.attachmentsErrorDetails = ''
+			try {
+				for (const file of files) {
+					const attachment = await this.uploadSingleAttachment(file)
+					if (attachment) {
+						this.attachments = [
+							...this.attachments.filter((item) => this.attachmentKey(item) !== this.attachmentKey(attachment)),
+							attachment,
+						]
+					}
+				}
+				this.attachmentsLoaded = true
+				await this.loadAttachments(true)
+				this.updateLocalCardCounts({ attachmentCount: this.visibleAttachments.length })
+			} catch (error) {
+				this.setPanelError('attachments', this.t('Не удалось загрузить файл.'), error)
+			} finally {
+				this.attachmentsUploading = false
+			}
+		},
+		attachmentUploadAttempts() {
+			const attempts = []
+			const apiV11Path = this.attachmentApiPath('1.1')
+			if (apiV11Path) {
+				attempts.push({
+					strategy: 'deckRestV11',
+					path: apiV11Path,
+					type: 'file',
+					includeCardId: false,
+					headers: {
+						'OCS-APIRequest': 'true',
+					},
+				})
+			}
+			const apiV10Path = this.attachmentApiPath('1.0')
+			if (apiV10Path) {
+				attempts.push({
+					strategy: 'deckRestV10',
+					path: apiV10Path,
+					type: 'deck_file',
+					includeCardId: false,
+					headers: {
+						'OCS-APIRequest': 'true',
+					},
+				})
+			}
+			attempts.push({
+				strategy: 'controllerFile',
+				path: this.attachmentControllerPath('/attachment'),
+				type: 'file',
+				includeCardId: true,
+				headers: {},
+			})
+			attempts.push({
+				strategy: 'controllerDeckFile',
+				path: this.attachmentControllerPath('/attachment'),
+				type: 'deck_file',
+				includeCardId: true,
+				headers: {},
+			})
+			return attempts
+		},
+		async uploadSingleAttachment(file) {
+			const attempts = this.attachmentUploadAttempts()
+			console.log('[DeckList24] Attachment upload attempts prepared', attempts.map((attempt) => ({
+				strategy: attempt.strategy,
+				url: this.generateUrl(attempt.path),
+				cardId: this.card.id,
+				boardId: this.currentBoardId(),
+				stackId: this.currentStackId(),
+				type: attempt.type,
+				includeCardId: attempt.includeCardId,
+			})))
+			const failures = []
+			for (const attempt of attempts) {
+				try {
+					return await this.uploadAttachmentWithAttempt(file, attempt)
+				} catch (error) {
+					failures.push({ attempt, error })
+					console.warn('[DeckList24] Attachment upload attempt failed', {
+						strategy: attempt.strategy,
+						url: this.generateUrl(attempt.path),
+						cardId: this.card.id,
+						boardId: this.currentBoardId(),
+						stackId: this.currentStackId(),
+						fileName: file.name,
+						status: error && error.status,
+						error,
+					})
+					if (error && (error.status === 401 || error.status === 403)) {
+						break
+					}
+				}
+			}
+			throw this.createUploadAttemptsError(failures)
+		},
+		async uploadAttachmentWithAttempt(file, attempt) {
+			const formData = new FormData()
+			if (attempt.includeCardId) {
+				formData.append('cardId', this.card.id)
+			}
+			formData.append('type', attempt.type)
+			formData.append('data', '')
+			formData.append('file', file)
+			console.log({
+				action: 'uploadAttachment',
+				strategy: attempt.strategy,
+				url: this.generateUrl(attempt.path),
+				cardId: this.card.id,
+				boardId: this.currentBoardId(),
+				stackId: this.currentStackId(),
+				fileName: file.name,
+				fileSize: file.size,
+				attachmentType: attempt.type,
+				formDataKeys: Array.from(formData.keys()),
+			})
+			return this.request(attempt.path, {
+				action: 'uploadAttachment:' + attempt.strategy,
+				method: 'POST',
+				cardId: this.card.id,
+				boardId: this.currentBoardId(),
+				payloadKeys: Array.from(formData.keys()),
+				headers: attempt.headers,
+				body: formData,
+			})
+		},
+		createUploadAttemptsError(failures) {
+			const lastFailure = failures[failures.length - 1]
+			const lastError = lastFailure && lastFailure.error ? lastFailure.error : new Error(this.t('Не удалось загрузить файл.'))
+			const attemptsText = failures.map(({ attempt, error }) => {
+				return [
+					'- ' + attempt.strategy,
+					this.generateUrl(attempt.path),
+					error && error.status ? 'HTTP ' + error.status : '',
+					error && error.requestId ? 'requestId ' + error.requestId : '',
+					error && error.ocsMessage ? error.ocsMessage : '',
+				].filter(Boolean).join(' | ')
+			}).join('\n')
+			const error = new Error(this.getErrorMessage(lastError) + (attemptsText ? '\n\nUpload attempts:\n' + attemptsText : ''))
+			error.status = lastError.status
+			error.url = lastError.url
+			error.method = lastError.method
+			error.ocsMessage = lastError.ocsMessage
+			error.requestId = lastError.requestId
+			error.responseBody = lastError.responseBody
+			error.responseText = lastError.responseText
+			error.uploadFailures = failures
+			return error
+		},
+		async deleteAttachment(attachment) {
+			const key = this.attachmentKey(attachment)
+			if (!this.canDeleteAttachment(attachment) || this.attachmentsDeleting[key]) {
+				return
+			}
+			this.$set(this.attachmentsDeleting, key, true)
+			this.attachmentsError = ''
+			this.attachmentsErrorDetails = ''
+			try {
+				const type = encodeURIComponent(attachment.type || 'deck_file')
+				const id = encodeURIComponent(attachment.id)
+				await this.request('/apps/deck/cards/' + encodeURIComponent(attachment.cardId || this.card.id) + '/attachment/' + type + ':' + id, {
+					action: 'deleteAttachment',
+					method: 'DELETE',
+					cardId: attachment.cardId || this.card.id,
+					boardId: this.currentBoardId(),
+				})
+				this.attachments = this.attachments.filter((item) => this.attachmentKey(item) !== key)
+				this.updateLocalCardCounts({ attachmentCount: this.visibleAttachments.length })
+			} catch (error) {
+				this.setPanelError('attachments', this.t('Не удалось удалить вложение.'), error)
+			} finally {
+				this.$delete(this.attachmentsDeleting, key)
+			}
+		},
+		updateLocalCardCounts(patch) {
+			this.card = this.normalizeCard({
+				...this.card,
+				...patch,
+			})
+			this.$emit('card-updated', this.card)
+			if (this.api && typeof this.api.onCardUpdated === 'function') {
+				this.api.onCardUpdated(this.card)
+			}
+		},
 		async updateCard(patch) {
 			const payload = this.buildCardPayload(patch)
 			const response = await this.ocsRequest('apps/deck/api/v1.0/cards/' + encodeURIComponent(this.card.id), {
+				action: 'updateCard',
 				method: 'PUT',
+				cardId: this.card.id,
+				boardId: payload.boardId,
+				payloadKeys: Object.keys(payload),
 				body: JSON.stringify(payload),
 			})
 			return this.normalizeCard({
@@ -676,6 +1402,75 @@ export default {
 				}
 			)
 		},
+		attachmentKey(attachment) {
+			return String(attachment.type || 'deck_file') + ':' + String(attachment.id)
+		},
+		attachmentName(attachment) {
+			const extendedData = attachment.extendedData || {}
+			const info = extendedData.info || {}
+			if (info.filename && info.extension) {
+				return info.filename + '.' + info.extension
+			}
+			return extendedData.fileName
+				|| extendedData.name
+				|| attachment.name
+				|| attachment.title
+				|| attachment.data
+				|| this.t('Вложение') + ' #' + attachment.id
+		},
+		attachmentSize(attachment) {
+			return Number(attachment.extendedData?.filesize || attachment.size || 0)
+		},
+		attachmentAuthor(attachment) {
+			return attachment.extendedData?.attachmentCreator?.displayName
+				|| attachment.extendedData?.attachmentCreator?.uid
+				|| ''
+		},
+		attachmentOpenUrl(attachment) {
+			if (attachment.extendedData?.fileid) {
+				return this.generateUrl('/f/' + encodeURIComponent(attachment.extendedData.fileid))
+			}
+			const attachmentId = encodeURIComponent(attachment.type || 'deck_file') + ':' + encodeURIComponent(attachment.id)
+			return this.generateUrl('/apps/deck/cards/' + encodeURIComponent(attachment.cardId || this.card.id) + '/attachment/' + attachmentId)
+		},
+		attachmentDownloadUrl(attachment) {
+			return this.attachmentOpenUrl(attachment)
+		},
+		canDeleteAttachment(attachment) {
+			return this.canEdit && Number(attachment.deletedAt || 0) === 0
+		},
+		formatFileSize(size) {
+			const bytes = Number(size || 0)
+			if (!bytes) {
+				return '-'
+			}
+			if (window.OC && typeof window.OC.Util?.humanFileSize === 'function') {
+				return window.OC.Util.humanFileSize(bytes)
+			}
+			const units = ['B', 'KB', 'MB', 'GB', 'TB']
+			let value = bytes
+			let unitIndex = 0
+			while (value >= 1024 && unitIndex < units.length - 1) {
+				value /= 1024
+				unitIndex += 1
+			}
+			return (unitIndex === 0 ? value : value.toFixed(value >= 10 ? 0 : 1)) + ' ' + units[unitIndex]
+		},
+		avatarUrl(userId) {
+			return this.generateUrl('/avatar/' + encodeURIComponent(userId) + '/32')
+		},
+		commentInitials(comment) {
+			const name = comment.actorDisplayName || comment.actorId || '?'
+			return String(name).trim().slice(0, 2).toUpperCase()
+		},
+		commentPlainText(comment) {
+			return this.decodeHtml(comment.message || '')
+		},
+		decodeHtml(value) {
+			const element = document.createElement('div')
+			element.innerHTML = String(value || '')
+			return element.textContent || element.innerText || ''
+		},
 		applyMarkdownFormat(format) {
 			const textarea = this.$refs.fallbackTextarea
 			if (!textarea) {
@@ -772,7 +1567,94 @@ export default {
 			if (!error) {
 				return this.t('Неизвестная ошибка')
 			}
-			return error.message || String(error)
+			if (error.message) {
+				return error.message
+			}
+			const parts = [
+				error.status ? 'HTTP status: ' + error.status : '',
+				error.method || error.url ? 'Request: ' + [error.method, error.url].filter(Boolean).join(' ') : '',
+				error.requestId ? 'Request ID: ' + error.requestId : '',
+				error.ocsMessage ? 'OCS message: ' + error.ocsMessage : '',
+				error.responseBody ? 'Response body: ' + this.formatResponseBody(error.responseBody, error.responseText) : '',
+			].filter(Boolean)
+			return parts.join('\n') || String(error)
+		},
+		getPayloadKeys(body) {
+			if (!body) {
+				return []
+			}
+			if (typeof FormData !== 'undefined' && body instanceof FormData && typeof body.keys === 'function') {
+				return Array.from(new Set(Array.from(body.keys())))
+			}
+			if (typeof body === 'string') {
+				try {
+					const parsed = JSON.parse(body)
+					if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+						return Object.keys(parsed)
+					}
+				} catch (error) {
+					// Plain text body.
+				}
+				return ['raw']
+			}
+			if (typeof body === 'object') {
+				return Object.keys(body)
+			}
+			return [typeof body]
+		},
+		parseResponseBody(text) {
+			if (!text) {
+				return null
+			}
+			try {
+				return JSON.parse(text)
+			} catch (error) {
+				return null
+			}
+		},
+		extractOcsData(data) {
+			if (data && data.ocs && Object.prototype.hasOwnProperty.call(data.ocs, 'data')) {
+				return data.ocs.data
+			}
+			return data
+		},
+		extractOcsMessage(data, fallback) {
+			return (data && data.ocs && data.ocs.meta && data.ocs.meta.message)
+				|| (data && data.message)
+				|| (data && data.error)
+				|| fallback
+				|| ''
+		},
+		formatResponseBody(data, text) {
+			if (data) {
+				try {
+					return typeof data === 'string' ? data : JSON.stringify(data)
+				} catch (error) {
+					return String(data)
+				}
+			}
+			return text || ''
+		},
+		createApiError(response, method, url, data, text) {
+			const ocsMessage = this.extractOcsMessage(data, response.statusText)
+			const responseBody = this.formatResponseBody(data, text)
+			const requestId = (data && data.requestId) || (data && data.ocs && data.ocs.meta && data.ocs.meta.requestId) || ''
+			const parts = [
+				'HTTP status: ' + response.status,
+				'Request: ' + method + ' ' + url,
+				requestId ? 'Request ID: ' + requestId : '',
+				ocsMessage ? 'OCS message: ' + ocsMessage : '',
+				responseBody ? 'Response body: ' + responseBody : '',
+			].filter(Boolean)
+			const requestError = new Error(parts.join('\n') || ('HTTP ' + response.status))
+			requestError.status = response.status
+			requestError.url = url
+			requestError.method = method
+			requestError.ocsMessage = ocsMessage
+			requestError.requestId = requestId
+			requestError.responseBody = data || text || ''
+			requestError.responseText = text || ''
+			return requestError
 		},
 		async request(path, options) {
 			if (this.api && typeof this.api.request === 'function') {
@@ -788,42 +1670,86 @@ export default {
 		},
 		async defaultRequest(url, options, ocs) {
 			const requestOptions = options || {}
+			const {
+				params,
+				action,
+				cardId,
+				boardId,
+				payloadKeys,
+				...fetchOptions
+			} = requestOptions
 			const headers = {
 				Accept: 'application/json',
 				'X-Requested-With': 'XMLHttpRequest',
 				...(ocs ? { 'OCS-APIRequest': 'true' } : {}),
 				...(requestOptions.headers || {}),
 			}
+			const isFormData = typeof FormData !== 'undefined' && requestOptions.body instanceof FormData
 
 			if (window.OC && window.OC.requestToken) {
 				headers.requesttoken = window.OC.requestToken
 			}
-			if (requestOptions.body && !headers['Content-Type']) {
+			if (requestOptions.body && !isFormData && !headers['Content-Type']) {
 				headers['Content-Type'] = 'application/json'
 			}
 
-			const response = await fetch(url, {
+			let requestUrl = url
+			if (params) {
+				const query = new URLSearchParams()
+				Object.keys(params).forEach((key) => {
+					if (params[key] !== null && typeof params[key] !== 'undefined') {
+						query.append(key, params[key])
+					}
+				})
+				const queryString = query.toString()
+				if (queryString) {
+					requestUrl += (requestUrl.indexOf('?') === -1 ? '?' : '&') + queryString
+				}
+			}
+
+			const method = String(fetchOptions.method || 'GET').toUpperCase()
+			const requestInfo = {
+				action: action || (ocs ? 'ocsRequest' : 'request'),
+				method,
+				url: requestUrl,
+				cardId: cardId || null,
+				boardId: boardId || params?.boardId || null,
+				payloadKeys: payloadKeys || this.getPayloadKeys(requestOptions.body),
+			}
+			console.log('[DeckList24 API request]', requestInfo)
+
+			const response = await fetch(requestUrl, {
 				credentials: 'same-origin',
-				...requestOptions,
+				...fetchOptions,
 				headers,
 			})
-			if (!response.ok) {
-				let message = response.statusText
-				try {
-					const data = await response.json()
-					message = (data.ocs && data.ocs.meta && data.ocs.meta.message) || data.message || data.error || message
-				} catch (error) {
-					message = await response.text()
-				}
-				const requestError = new Error(message || 'HTTP ' + response.status)
-				requestError.status = response.status
-				throw requestError
-			}
 			if (response.status === 204) {
+				console.log('[DeckList24 API response]', {
+					...requestInfo,
+					status: response.status,
+					parsedResponse: null,
+				})
 				return null
 			}
-			const data = await response.json()
-			return ocs ? (data.ocs && data.ocs.data ? data.ocs.data : data) : data
+			const responseText = await response.text()
+			const parsedResponse = this.parseResponseBody(responseText)
+			if (!response.ok) {
+				const requestError = this.createApiError(response, method, requestUrl, parsedResponse, responseText)
+				console.error('[DeckList24 API error]', {
+					...requestInfo,
+					status: response.status,
+					parsedResponse,
+					errorBody: parsedResponse || responseText,
+					error: requestError,
+				})
+				throw requestError
+			}
+			console.log('[DeckList24 API response]', {
+				...requestInfo,
+				status: response.status,
+				parsedResponse: parsedResponse || responseText,
+			})
+			return ocs && parsedResponse ? this.extractOcsData(parsedResponse) : (parsedResponse || responseText)
 		},
 		generateUrl(path) {
 			if (this.api && typeof this.api.generateUrl === 'function') {
@@ -836,10 +1762,10 @@ export default {
 		},
 		generateOcsUrl(path) {
 			const normalized = String(path).replace(/^\/+/, '')
-			if (window.OC && typeof window.OC.linkToOCS === 'function') {
-				return window.OC.linkToOCS(normalized, 2)
-			}
-			return this.generateUrl('/ocs/v2.php/' + normalized)
+			const webRoot = window.OC && typeof window.OC.webroot === 'string'
+				? window.OC.webroot.replace(/\/+$/, '')
+				: ''
+			return webRoot + '/ocs/v2.php/' + normalized
 		},
 	},
 }
@@ -1013,8 +1939,33 @@ export default {
 }
 
 .decklist24-vue-card__notice--error {
+	align-items: flex-start;
+	flex-direction: column;
 	background: rgba(219, 72, 72, .12);
 	color: var(--color-error);
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.decklist24-vue-card__error-details {
+	width: 100%;
+	color: var(--color-main-text);
+}
+
+.decklist24-vue-card__error-details summary {
+	cursor: pointer;
+	font-weight: 700;
+}
+
+.decklist24-vue-card__error-details pre {
+	max-height: 160px;
+	margin: 8px 0 0;
+	padding: 8px;
+	overflow: auto;
+	border-radius: 4px;
+	background: var(--color-main-background);
+	color: var(--color-main-text);
+	white-space: pre-wrap;
 }
 
 .decklist24-vue-card__body {
@@ -1223,6 +2174,297 @@ export default {
 	color: var(--color-error);
 }
 
+.decklist24-vue-card__inline-state {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px;
+	color: var(--color-text-maxcontrast);
+}
+
+.decklist24-vue-card__file-input {
+	display: none;
+}
+
+.decklist24-vue-card__dropzone {
+	min-height: 220px;
+	border: 1px dashed var(--color-border);
+	border-radius: 6px;
+	background: var(--color-background-hover);
+	transition: border-color .15s ease, background-color .15s ease;
+}
+
+.decklist24-vue-card__dropzone--active {
+	border-color: var(--color-primary-element);
+	background: var(--color-primary-element-light, var(--color-background-hover));
+}
+
+.decklist24-vue-card__attachments,
+.decklist24-vue-card__comments {
+	display: grid;
+	gap: 10px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.decklist24-vue-card__attachments {
+	padding: 10px;
+}
+
+.decklist24-vue-card__attachments li {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 12px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	background: var(--color-main-background);
+}
+
+.decklist24-vue-card__file-icon {
+	flex: 0 0 auto;
+	width: 38px;
+	height: 38px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	background: var(--color-background-hover);
+	color: var(--color-text-maxcontrast);
+}
+
+.decklist24-vue-card__file-icon svg {
+	width: 22px;
+	height: 22px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.decklist24-vue-card__file-main {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.decklist24-vue-card__file-main a {
+	display: inline-block;
+	max-width: 100%;
+	color: var(--color-main-text);
+	font-weight: 700;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.decklist24-vue-card__file-meta {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin-top: 3px;
+	color: var(--color-text-maxcontrast);
+	font-size: 12px;
+}
+
+.decklist24-vue-card__file-actions {
+	flex: 0 0 auto;
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
+.decklist24-vue-card__file-actions a.decklist24-vue-card__small-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--color-border);
+	background: var(--color-background-hover);
+	color: var(--color-main-text);
+	text-decoration: none;
+}
+
+.decklist24-vue-card__comment-form {
+	display: grid;
+	gap: 8px;
+	padding: 12px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	background: var(--color-background-hover);
+}
+
+.decklist24-vue-card__comment-form textarea {
+	width: 100%;
+	min-height: 88px;
+	margin: 0;
+	resize: vertical;
+}
+
+.decklist24-vue-card__reply-preview,
+.decklist24-vue-card__reply {
+	position: relative;
+	padding: 8px 36px 8px 10px;
+	border-inline-start: 4px solid var(--color-border-dark, var(--color-border));
+	border-radius: 4px;
+	background: var(--color-main-background);
+	color: var(--color-text-maxcontrast);
+}
+
+.decklist24-vue-card__reply-preview div {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	color: var(--color-main-text);
+}
+
+.decklist24-vue-card__reply-preview p,
+.decklist24-vue-card__reply p {
+	margin: 4px 0 0;
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
+
+.decklist24-vue-card__comments li {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+}
+
+.decklist24-vue-card__avatar {
+	flex: 0 0 auto;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: var(--color-background-hover);
+	object-fit: cover;
+}
+
+.decklist24-vue-card__avatar--fallback {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--color-text-maxcontrast);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.decklist24-vue-card__comment {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 10px 12px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	background: var(--color-background-hover);
+}
+
+.decklist24-vue-card__comment header {
+	display: flex;
+	justify-content: space-between;
+	gap: 10px;
+	margin-bottom: 6px;
+}
+
+.decklist24-vue-card__comment-title {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	min-width: 0;
+}
+
+.decklist24-vue-card__comment-title span {
+	flex: 0 0 auto;
+	color: var(--color-text-maxcontrast);
+	font-size: 12px;
+}
+
+.decklist24-vue-card__comment-menu {
+	position: relative;
+	flex: 0 0 auto;
+}
+
+.decklist24-vue-card__icon-button {
+	width: 30px;
+	min-width: 30px;
+	height: 30px;
+	min-height: 30px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--color-main-text);
+	font-size: 20px;
+	line-height: 1;
+}
+
+.decklist24-vue-card__icon-button:hover,
+.decklist24-vue-card__icon-button:focus {
+	background: var(--color-background-hover);
+}
+
+.decklist24-vue-card__reply-preview .decklist24-vue-card__icon-button {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+}
+
+.decklist24-vue-card__comment-menu-list {
+	position: absolute;
+	top: 32px;
+	right: 0;
+	z-index: 5;
+	min-width: 150px;
+	padding: 4px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	background: var(--color-main-background);
+	box-shadow: 0 8px 22px rgba(0, 0, 0, .18);
+}
+
+.decklist24-vue-card__comment-menu-list button {
+	width: 100%;
+	min-height: 34px;
+	margin: 0;
+	padding: 6px 10px;
+	border: 0;
+	border-radius: 4px;
+	background: transparent;
+	text-align: left;
+}
+
+.decklist24-vue-card__comment-menu-list button:hover,
+.decklist24-vue-card__comment-menu-list button:focus {
+	background: var(--color-background-hover);
+}
+
+.decklist24-vue-card__comment-edit {
+	display: grid;
+	gap: 8px;
+}
+
+.decklist24-vue-card__comment-edit textarea {
+	width: 100%;
+	min-height: 88px;
+	margin: 0;
+	resize: vertical;
+}
+
+.decklist24-vue-card__comment-text {
+	overflow-wrap: anywhere;
+}
+
+.decklist24-vue-card__comment-text :deep(> :first-child) {
+	margin-top: 0;
+}
+
+.decklist24-vue-card__comment-text :deep(> :last-child) {
+	margin-bottom: 0;
+}
+
 .decklist24-vue-card__placeholder {
 	display: grid;
 	place-items: center;
@@ -1254,6 +2496,21 @@ export default {
 	.decklist24-vue-card__markdown-workspace textarea {
 		border-right: 0;
 		border-bottom: 1px solid var(--color-border);
+	}
+
+	.decklist24-vue-card__attachments li {
+		align-items: flex-start;
+		flex-wrap: wrap;
+	}
+
+	.decklist24-vue-card__file-actions {
+		width: 100%;
+		justify-content: flex-start;
+	}
+
+	.decklist24-vue-card__comment header {
+		flex-direction: column;
+		gap: 2px;
 	}
 }
 </style>
