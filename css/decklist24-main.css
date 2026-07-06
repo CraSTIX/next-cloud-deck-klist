@@ -1,0 +1,773 @@
+.decklist24-app {
+	height: calc(100vh - var(--header-height, 50px));
+	min-height: 460px;
+	background: var(--color-main-background);
+	color: var(--color-main-text);
+}
+
+.decklist24-layout {
+	display: flex;
+	height: 100%;
+	min-height: 0;
+}
+
+.decklist24-sidebar {
+	flex: 0 0 280px;
+	min-width: 240px;
+	border-right: 1px solid var(--color-border);
+	background: var(--color-background-hover);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+.decklist24-sidebar__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px;
+	border-bottom: 1px solid var(--color-border);
+}
+
+.decklist24-sidebar__head h2,
+.decklist24-header h1 {
+	margin: 0;
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.decklist24-board-list {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	padding: 8px;
+}
+
+.decklist24-board {
+	width: 100%;
+	min-height: 44px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0 0 4px;
+	padding: 0 10px;
+	border: 0;
+	border-radius: 6px;
+	background: transparent;
+	text-align: left;
+	cursor: pointer;
+}
+
+.decklist24-board:hover,
+.decklist24-board:focus,
+.decklist24-board--active {
+	background: var(--color-main-background);
+}
+
+.decklist24-board--active {
+	box-shadow: inset 3px 0 0 var(--color-primary-element);
+}
+
+.decklist24-board__color {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	flex: 0 0 auto;
+}
+
+.decklist24-board__title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-weight: 600;
+}
+
+.decklist24-main {
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	padding: 18px;
+}
+
+.decklist24-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: 14px;
+}
+
+.decklist24-header p {
+	margin: 4px 0 0;
+	color: var(--color-text-maxcontrast);
+}
+
+.decklist24-header__actions {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
+.decklist24-filters {
+	display: grid;
+	grid-template-columns: minmax(220px, 1fr) minmax(180px, 240px) minmax(180px, 240px);
+	gap: 10px;
+	margin-bottom: 12px;
+}
+
+.decklist24-filters label {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.decklist24-filters span {
+	font-size: 12px;
+	color: var(--color-text-maxcontrast);
+}
+
+.decklist24-filters input,
+.decklist24-filters select,
+.decklist24-status-select {
+	width: 100%;
+	min-height: 36px;
+	margin: 0;
+}
+
+.decklist24-alert {
+	margin-bottom: 12px;
+	padding: 10px 12px;
+	border-radius: 6px;
+	background: var(--color-error);
+	color: var(--color-primary-text);
+}
+
+.decklist24-table-wrap {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: auto;
+	border: 1px solid var(--color-border);
+	border-radius: 8px;
+	background: var(--color-main-background);
+}
+
+.decklist24-table {
+	width: 100%;
+	min-width: 1100px;
+	border-collapse: collapse;
+	table-layout: fixed;
+}
+
+.decklist24-table th,
+.decklist24-table td {
+	height: 52px;
+	padding: 0 12px;
+	border-bottom: 1px solid var(--color-border);
+	text-align: left;
+	vertical-align: middle;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.decklist24-table th {
+	position: sticky;
+	top: 0;
+	z-index: 3;
+	height: 44px;
+	background: var(--color-main-background);
+	color: var(--color-text-maxcontrast);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.decklist24-table tr:hover td {
+	background: var(--color-background-hover);
+}
+
+.decklist24-col-check {
+	width: 46px;
+}
+
+.decklist24-col-actions {
+	width: 54px;
+}
+
+.decklist24-title-button {
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--color-main-text);
+	font-weight: 600;
+	text-align: left;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.decklist24-title-button:hover,
+.decklist24-title-button:focus {
+	color: var(--color-primary-element);
+	text-decoration: underline;
+}
+
+.decklist24-status-select {
+	background-color: var(--color-background-hover);
+}
+
+.decklist24-labels {
+	display: flex;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	overflow: hidden;
+}
+
+.decklist24-labels li {
+	max-width: 120px;
+	padding: 3px 6px;
+	border-radius: 3px;
+	font-size: 12px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.decklist24-row-action,
+.decklist24-icon-button {
+	min-width: 36px;
+	width: 36px;
+	height: 36px;
+	padding: 0;
+	border-radius: 50%;
+}
+
+.decklist24-muted {
+	color: var(--color-text-maxcontrast);
+}
+
+.decklist24-overdue {
+	color: var(--color-error);
+	font-weight: 700;
+}
+
+.decklist24-empty {
+	text-align: center !important;
+	color: var(--color-text-maxcontrast);
+}
+
+.decklist24-row--archived {
+	opacity: .6;
+}
+
+.decklist24-app--loading .decklist24-table-wrap {
+	opacity: .65;
+}
+
+.decklist24-loading,
+.decklist24-missing {
+	padding: 40px;
+}
+
+.decklist24-loading {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.decklist24-missing {
+	max-width: 720px;
+}
+
+.decklist24-missing h2 {
+	margin-top: 0;
+}
+
+.decklist24-modal-backdrop {
+	position: fixed;
+	inset: var(--header-height, 50px) 0 0 0;
+	z-index: 2000;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 28px 16px;
+	background: rgba(0, 0, 0, .35);
+	overflow-y: auto;
+}
+
+.decklist24-modal-backdrop[hidden] {
+	display: none;
+}
+
+.decklist24-card-modal {
+	width: min(780px, 100%);
+	max-height: calc(100vh - var(--header-height, 50px) - 56px);
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--color-border);
+	border-radius: 8px;
+	background: var(--color-main-background);
+	box-shadow: 0 16px 40px rgba(0, 0, 0, .28);
+	overflow: hidden;
+}
+
+.decklist24-card-modal__content {
+	min-height: 0;
+	overflow-y: auto;
+}
+
+.decklist24-card-modal__header {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 18px 20px;
+	border-bottom: 1px solid var(--color-border);
+	background: var(--color-main-background);
+}
+
+.decklist24-card-modal__title-wrap {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.decklist24-card-modal__title-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+}
+
+.decklist24-card-modal__title-wrap h2 {
+	flex: 1 1 auto;
+	min-width: 0;
+	margin: 0;
+	font-size: 22px;
+	line-height: 1.25;
+	overflow-wrap: anywhere;
+}
+
+.decklist24-card-modal__title-editor {
+	display: grid;
+	gap: 8px;
+}
+
+.decklist24-card-modal__title-editor label {
+	color: var(--color-text-maxcontrast);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.decklist24-card-modal__title-editor input {
+	width: min(560px, 100%);
+	min-height: 42px;
+	margin: 0;
+	font-size: 18px;
+	font-weight: 700;
+}
+
+.decklist24-card-modal__title-wrap p {
+	margin: 5px 0 0;
+	color: var(--color-text-maxcontrast);
+}
+
+.decklist24-card-modal__close {
+	flex: 0 0 auto;
+	width: 36px;
+	height: 36px;
+	min-width: 36px;
+	margin: 0;
+	padding: 0;
+	border-radius: 50%;
+	font-size: 24px;
+	line-height: 1;
+}
+
+.decklist24-card-modal__notice,
+.decklist24-card-modal__loading,
+.decklist24-card-modal__save-status {
+	margin: 14px 20px 0;
+	padding: 10px 12px;
+	border-radius: 6px;
+}
+
+.decklist24-card-modal__notice {
+	background: var(--color-warning, #fcf0b3);
+	color: var(--color-main-text);
+}
+
+.decklist24-card-modal__loading {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: var(--color-background-hover);
+	color: var(--color-text-maxcontrast);
+}
+
+.decklist24-card-modal__save-status {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: var(--color-background-hover);
+	color: var(--color-text-maxcontrast);
+}
+
+.decklist24-card-modal__save-status--saved {
+	background: rgba(46, 160, 67, .12);
+	color: var(--color-success, #2ea043);
+}
+
+.decklist24-card-modal__save-status--error {
+	background: rgba(219, 72, 72, .12);
+	color: var(--color-error);
+}
+
+.decklist24-card-modal__meta {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 10px;
+	padding: 18px 20px 0;
+}
+
+.decklist24-card-modal__meta-item {
+	min-width: 0;
+	padding: 10px 12px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	background: var(--color-background-hover);
+}
+
+.decklist24-card-modal__meta-item span,
+.decklist24-card-modal__comment-meta {
+	display: block;
+	margin-bottom: 4px;
+	color: var(--color-text-maxcontrast);
+	font-size: 12px;
+}
+
+.decklist24-card-modal__meta-item strong {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.decklist24-card-modal__body {
+	padding: 6px 20px 20px;
+}
+
+.decklist24-card-modal__section {
+	padding-top: 18px;
+}
+
+.decklist24-card-modal__section-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	margin: 0 0 8px;
+}
+
+.decklist24-card-modal__section-head h3 {
+	margin: 0;
+	font-size: 15px;
+}
+
+.decklist24-card-modal__edit-button {
+	flex: 0 0 auto;
+	min-height: 30px;
+	padding: 4px 10px;
+	font-size: 13px;
+}
+
+.decklist24-card-modal__edit-actions {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.decklist24-card-modal__description-editor {
+	display: grid;
+	gap: 10px;
+}
+
+.decklist24-card-modal__markdown-editor {
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	background: var(--color-main-background);
+	overflow: hidden;
+}
+
+.decklist24-card-modal__editor-toolbar {
+	display: flex;
+	gap: 4px;
+	flex-wrap: wrap;
+	padding: 6px;
+	border-bottom: 1px solid var(--color-border);
+	background: var(--color-main-background);
+}
+
+.decklist24-card-modal__editor-tool {
+	width: 34px;
+	min-width: 34px;
+	height: 32px;
+	min-height: 32px;
+	margin: 0;
+	padding: 0;
+	border-radius: 4px;
+	font-weight: 700;
+}
+
+.decklist24-card-modal__markdown-workspace {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(260px, 0.9fr);
+	min-height: 260px;
+}
+
+.decklist24-card-modal__markdown-pane {
+	min-width: 0;
+}
+
+.decklist24-card-modal__markdown-pane--preview {
+	border-left: 1px solid var(--color-border);
+	background: var(--color-background-hover);
+	overflow: auto;
+}
+
+.decklist24-card-modal__description-editor textarea {
+	width: 100%;
+	height: 100%;
+	min-height: 260px;
+	margin: 0;
+	padding: 10px 12px;
+	border: 0;
+	background: var(--color-main-background);
+	color: var(--color-main-text);
+	font: inherit;
+	line-height: 1.45;
+	resize: vertical;
+}
+
+.decklist24-card-modal__markdown-pane--preview .decklist24-card-modal__description {
+	min-height: 100%;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+}
+
+.decklist24-card-modal__description {
+	min-height: 58px;
+	margin: 0;
+	padding: 12px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	background: var(--color-background-hover);
+	overflow-wrap: anywhere;
+}
+
+.decklist24-markdown {
+	line-height: 1.5;
+}
+
+.decklist24-markdown > :first-child {
+	margin-top: 0;
+}
+
+.decklist24-markdown > :last-child {
+	margin-bottom: 0;
+}
+
+.decklist24-markdown p {
+	margin: 0 0 10px;
+}
+
+.decklist24-markdown h4,
+.decklist24-markdown h5,
+.decklist24-markdown h6 {
+	margin: 16px 0 8px;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+.decklist24-markdown h4 {
+	font-size: 16px;
+}
+
+.decklist24-markdown h5,
+.decklist24-markdown h6 {
+	font-size: 14px;
+}
+
+.decklist24-markdown a {
+	color: var(--color-primary-element);
+	text-decoration: underline;
+}
+
+.decklist24-markdown table {
+	width: 100%;
+	margin: 10px 0;
+	border-collapse: collapse;
+	background: var(--color-main-background);
+}
+
+.decklist24-markdown th,
+.decklist24-markdown td {
+	padding: 8px 10px;
+	border: 1px solid var(--color-border);
+	text-align: left;
+	vertical-align: top;
+}
+
+.decklist24-markdown th {
+	background: var(--color-background-dark, var(--color-background-hover));
+	font-weight: 700;
+}
+
+.decklist24-markdown ul,
+.decklist24-markdown ol {
+	margin: 0 0 10px;
+	padding-left: 24px;
+}
+
+.decklist24-markdown li {
+	margin: 4px 0;
+}
+
+.decklist24-markdown__task-list {
+	padding-left: 0 !important;
+	list-style: none;
+}
+
+.decklist24-markdown__task {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+}
+
+.decklist24-markdown__task input[type='checkbox'] {
+	flex: 0 0 auto;
+	margin-top: 3px;
+}
+
+.decklist24-markdown blockquote {
+	margin: 10px 0;
+	padding: 8px 12px;
+	border-left: 3px solid var(--color-border);
+	color: var(--color-text-maxcontrast);
+	background: var(--color-main-background);
+}
+
+.decklist24-markdown pre {
+	max-width: 100%;
+	margin: 10px 0;
+	padding: 10px 12px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	background: var(--color-main-background);
+	overflow-x: auto;
+}
+
+.decklist24-markdown code {
+	padding: 1px 4px;
+	border-radius: 4px;
+	background: var(--color-main-background);
+	font-family: var(--font-face-monospace, monospace);
+}
+
+.decklist24-markdown pre code {
+	display: block;
+	padding: 0;
+	background: transparent;
+	white-space: pre;
+}
+
+.decklist24-markdown hr {
+	margin: 14px 0;
+	border: 0;
+	border-top: 1px solid var(--color-border);
+}
+
+.decklist24-card-modal__comments,
+.decklist24-card-modal__attachments {
+	display: grid;
+	gap: 8px;
+}
+
+.decklist24-card-modal__comment {
+	padding: 10px 12px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	background: var(--color-background-hover);
+}
+
+.decklist24-card-modal__comment p,
+.decklist24-card-modal__attachments p {
+	margin: 0;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.decklist24-card-modal__attachments ul {
+	display: grid;
+	gap: 6px;
+	margin: 0;
+	padding-left: 18px;
+}
+
+.decklist24-card-modal__subtle-error {
+	color: var(--color-error);
+}
+
+@media (max-width: 900px) {
+	.decklist24-layout {
+		flex-direction: column;
+	}
+
+	.decklist24-sidebar {
+		flex: 0 0 auto;
+		max-height: 220px;
+		border-right: 0;
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.decklist24-filters {
+		grid-template-columns: 1fr;
+	}
+
+	.decklist24-modal-backdrop {
+		padding: 12px;
+	}
+
+	.decklist24-card-modal {
+		max-height: calc(100vh - var(--header-height, 50px) - 24px);
+	}
+
+	.decklist24-card-modal__meta {
+		grid-template-columns: 1fr;
+	}
+
+	.decklist24-card-modal__title-row,
+	.decklist24-card-modal__section-head {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+
+	.decklist24-card-modal__markdown-workspace {
+		grid-template-columns: 1fr;
+	}
+
+	.decklist24-card-modal__markdown-pane--preview {
+		border-left: 0;
+		border-top: 1px solid var(--color-border);
+	}
+}

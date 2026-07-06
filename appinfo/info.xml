@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>decklist24</id>
+	<name>DeckList24</name>
+	<summary>List interface for Nextcloud Deck tasks</summary>
+	<description>DeckList24 is a separate Nextcloud app that shows Deck cards as a Bitrix24-like task list. It uses the installed Deck app as the data source and does not store or duplicate tasks.</description>
+	<version>0.1.0</version>
+	<licence>agpl</licence>
+	<author>DeckList24 contributors</author>
+	<namespace>DeckList24</namespace>
+	<category>organization</category>
+	<category>office</category>
+	<dependencies>
+		<nextcloud min-version="26" max-version="26"/>
+	</dependencies>
+	<navigations>
+		<navigation>
+			<name>DeckList24</name>
+			<route>decklist24.page.index</route>
+			<icon>app.svg</icon>
+			<order>11</order>
+		</navigation>
+	</navigations>
+</info>
